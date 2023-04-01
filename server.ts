@@ -1,10 +1,15 @@
 import express from "express";
 import csv from "csv-parser";
 import fs from "fs";
+import cors from "cors";
 import { Clinic, Patient } from "./types";
 
 const clinics: Clinic[] = [];
 const patients: Patient[] = [];
+const allowedOrigins: string[] = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+];
 
 const app = express();
 
@@ -62,8 +67,30 @@ fs.createReadStream("data/patients-2.csv")
     console.log(err);
   });
 
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg =
+          "The CORS policy for this site does not allow access from the specified Origin.";
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+  })
+);
+
 app.get("/api/clinics", (_, res) => {
   res.json(clinics);
+});
+
+app.get("/api/patients/:clinic_id", (req, res) => {
+  const { clinic_id } = req.params;
+  const clinicPatients = patients.filter(
+    (patient) => patient.clinic_id.toString() === clinic_id
+  );
+  res.json(clinicPatients);
 });
 
 app.listen(3001, () => {
